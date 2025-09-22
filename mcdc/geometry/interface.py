@@ -100,7 +100,7 @@ def inspect_geometry(particle_container, mcdc, data):
 
             # Apply rotation
             if cell["fill_rotated"]:
-                _rotate_particle(particle, mcdc_get.cell.rotation_all(cell, data))
+                _rotate_particle(particle_container, mcdc_get.cell.rotation_all(cell, data))
 
             # Universe cell?
             if cell["fill_type"] == FILL_UNIVERSE:
@@ -221,7 +221,7 @@ def locate_particle(particle_container, mcdc, data):
 
             # Apply rotation
             if cell["fill_rotated"]:
-                _rotate_particle(particle, mcdc_get.cell.rotation_all(cell, data))
+                _rotate_particle(particle_container, mcdc_get.cell.rotation_all(cell, data))
 
             # Universe cell?
             if cell["fill_type"] == FILL_UNIVERSE:
@@ -271,7 +271,9 @@ def locate_particle(particle_container, mcdc, data):
 
 
 @nb.njit
-def _rotate_particle(particle, rotation):
+def _rotate_particle(particle_container, rotation):
+    particle = particle_container[0]
+
     # Particle initial coordinate
     x = particle["x"]
     y = particle["y"]
