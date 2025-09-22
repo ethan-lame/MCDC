@@ -95,14 +95,20 @@ def inspect_geometry(particle_container, mcdc, data):
 
             # Apply translation
             if cell["fill_translated"]:
+                print('translated')
+                print('  before', particle['x'], particle['y'], particle['z'])
                 particle["x"] -= mcdc_get.cell.translation(0, cell, data)
                 particle["y"] -= mcdc_get.cell.translation(1, cell, data)
                 particle["z"] -= mcdc_get.cell.translation(2, cell, data)
+                print('  after', particle['x'], particle['y'], particle['z'])
 
 
             # Apply rotation
             if cell["fill_rotated"]:
+                print('rotated')
+                print('  before', particle['x'], particle['y'], particle['z'])
                 _rotate_particle(particle, mcdc_get.cell.rotation_all(cell, data))
+                print('  after', particle['x'], particle['y'], particle['z'])
 
             # Universe cell?
             if cell["fill_type"] == FILL_UNIVERSE:
