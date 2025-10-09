@@ -6,11 +6,10 @@ from numba import njit, objmode
 
 import mcdc.config as config
 import mcdc.code_factory.adapt as adapt
+import mcdc.object_.numba_types as type_
 import mcdc.transport.geometry as geometry
 import mcdc.transport.kernel as kernel
 import mcdc.transport.tally as tally_module
-import mcdc.print_ as print_module
-import mcdc.togo.type_ as type_
 
 from mcdc.constant import *
 from mcdc.print_ import (
@@ -57,15 +56,13 @@ def teardown_gpu(mcdc):
     pass
 
 
-# =========================================================================
+# ======================================================================================
 # Fixed-source loop
-# =========================================================================
-
+# ======================================================================================
 
 @njit
 def fixed_source_simulation(mcdc_arr, data):
-    # Ensure `mcdc` exist for the lifetime of the program
-    # by intentionally leaking their memory
+    # Ensure `mcdc` exist for the lifetime of the program by intentionally leaking their memory
     adapt.leak(mcdc_arr)
     mcdc = mcdc_arr[0]
 
@@ -78,10 +75,7 @@ def fixed_source_simulation(mcdc_arr, data):
 
     # Loop over batches
     for i_batch in range(N_batch):
-        if not mcdc["technique"]["domain_decomposition"]:
-            kernel.distribute_work(N=N_particle, mcdc=mcdc)
-        else:
-            kernel.distribute_work_dd(N_particle, mcdc=mcdc)
+        kernel.distribute_work(N=N_particle, mcdc=mcdc)
         mcdc["idx_batch"] = i_batch
         seed_batch = kernel.split_seed(i_batch, settings["rng_seed"])
 
@@ -89,10 +83,6 @@ def fixed_source_simulation(mcdc_arr, data):
         if N_batch > 1:
             with objmode():
                 print_header_batch(i_batch, N_batch)
-            # TODO
-            # if mcdc["technique"]["uq"]:
-            #    seed_uq = kernel.split_seed(seed_batch, SEED_SPLIT_UQ)
-            #    kernel.uq_reset(mcdc, seed_uq)
 
         # Loop over time censuses
         for i_census in range(N_census):
@@ -126,6 +116,7 @@ def fixed_source_simulation(mcdc_arr, data):
             ):
                 # No more particle to work on
                 break
+
             # Loop over source particles
             seed_source = kernel.split_seed(seed_census, SEED_SPLIT_SOURCE)
             loop_source(seed_source, mcdc, data)
@@ -242,14 +233,14 @@ def generate_source_particle(work_start, idx_work, seed, prog, data):
     # Get a source particle and put into active bank
     # =====================================================================
 
-    P_arr = adapt.local_array(1, type_.particle_record)
+    P_arr = adapt.local_array(1, type_.particle_data)
     P = P_arr[0]
 
     # Get from fixed-source?
     if kernel.get_bank_size(mcdc["bank_source"]) == 0:
         # Sample source
         kernel.source_particle(P_arr, seed_work, mcdc)
-
+    
     # Get from source bank
     else:
         P_arr = mcdc["bank_source"]["particles"][idx_work : (idx_work + 1)]
@@ -258,21 +249,6 @@ def generate_source_particle(work_start, idx_work, seed, prog, data):
     # Skip if beyond time boundary
     if P["t"] > settings["time_boundary"]:
         return
-
-    # If domain is decomposed, check if particle is in the domain
-    if mcdc["technique"]["domain_decomposition"]:
-        if not kernel.particle_in_domain(P_arr, mcdc):
-            return
-
-        # Also check if it belongs to the current rank
-        mcdc["dd_N_local_source"] += 1
-        if mcdc["technique"]["dd_work_ratio"][mcdc["dd_idx"]] > 1:
-            if (
-                mcdc["dd_N_local_source"]
-                % mcdc["technique"]["dd_work_ratio"][mcdc["dd_idx"]]
-                != mcdc["dd_local_rank"]
-            ):
-                return
 
     # Check if it is beyond current or next census times
     hit_census = False
@@ -323,10 +299,6 @@ def generate_source_particle(work_start, idx_work, seed, prog, data):
 def prep_particle(P_arr, prog):
     P = P_arr[0]
     mcdc = adapt.mcdc_global(prog)
-
-    # Apply weight window
-    if mcdc["technique"]["weight_window"]:
-        kernel.weight_window(P_arr, prog)
 
 
 @njit
@@ -426,9 +398,6 @@ def source_dd_resolution(data_tally, prog, data):
 def loop_source(seed, mcdc, data):
     # Progress bar indicator
     N_prog = 0
-
-    if mcdc["technique"]["domain_decomposition"]:
-        kernel.dd_check_in(mcdc)
 
     # Loop over particle sources
     work_start = mcdc["mpi_work_start"]
