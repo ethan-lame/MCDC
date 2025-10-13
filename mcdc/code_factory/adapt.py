@@ -431,7 +431,7 @@ def gpu_forward_declare(args):
     global state_spec
     global mcdc_global_gpu, mcdc_data_gpu
     global group_gpu, thread_gpu
-    global particle_gpu, particle_record_gpu
+    global particle_gpu, particle_data_gpu
     global step_async, find_cell_async, halt_early
 
     none_type = numba.from_dtype(np.dtype([]))
@@ -451,7 +451,7 @@ def gpu_forward_declare(args):
     group_gpu = access_fns["group"]
     thread_gpu = access_fns["thread"]
     particle_gpu = numba.from_dtype(type_.particle)
-    particle_record_gpu = numba.from_dtype(type_.particle_record)
+    particle_data_gpu = numba.from_dtype(type_.particle_data)
 
     def step(prog: numba.uintp, P: particle_gpu):
         pass
