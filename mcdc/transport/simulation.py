@@ -11,7 +11,7 @@ import mcdc.transport.geometry as geometry
 import mcdc.transport.kernel as kernel
 import mcdc.transport.physics as physics
 import mcdc.transport.tally as tally_module
-
+import mcdc.transport.technique as technique
 
 from mcdc.constant import *
 from mcdc.print_ import (
@@ -20,7 +20,6 @@ from mcdc.print_ import (
     print_progress_eigenvalue,
 )
 from mcdc.transport.source import source_particle
-from mcdc.transport.technique import weight_roulette
 
 caching = config.caching
 
@@ -562,7 +561,7 @@ def step_particle(P_arr, prog, data):
 
     # Weight roulette
     if P['alive']:
-        weight_roulette(P_arr, prog)
+        technique.weight_roulette(P_arr, prog)
 
 
 def build_gpu_progs(input_deck, args):
