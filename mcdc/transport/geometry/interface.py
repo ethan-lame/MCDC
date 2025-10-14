@@ -273,7 +273,7 @@ def locate_particle(particle_container, mcdc, data):
     return not particle_is_lost
 
 
-@nb.njit
+@njit
 def _rotate_particle(particle_container, rotation):
     particle = particle_container[0]
 
@@ -305,7 +305,7 @@ def _rotate_particle(particle_container, rotation):
     particle["uz"] = uz_rotated
 
 
-@nb.njit
+@njit
 def _rotation_matrix(rotation):
     phi = rotation[0]
     theta = rotation[1]
