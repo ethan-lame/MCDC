@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mcdc.object_.cell import Cell
     from mcdc.object_.surface import Surface
+    from mcdc.object_.csbin import CSBin
 
 ####
 
@@ -32,6 +33,8 @@ from mcdc.constant import (
     TALLY_CELL,
     TALLY_MESH,
     TALLY_SURFACE,
+    TALLY_CS,
+    TALLY_CSBIN,
 )
 from mcdc.object_.mesh import MeshBase
 from mcdc.object_.base import ObjectPolymorphic
@@ -376,4 +379,139 @@ class TallyMesh(TallyBase):
         )
         text += super()._phasespace_filter_text()
         text += f"  - Bin shape (mu, azi, energy, time, x, y, z, score): {self.bin.shape} \n"
+        return text
+
+
+# ======================================================================================
+# Compressed sensing tally
+# ======================================================================================
+
+# class TallyCS(TallyBase):
+#     # Annotations for Numba mode
+#     label: str = "cs_tally"
+#     #
+#     mesh: MeshBase
+#     N_cs_bin: int
+
+#     def __init__(
+#         self,
+#         mesh: MeshBase,
+#         N_cs_bin: int,
+#         bin: CSBin,
+#         name: str = "",
+#         scores: list[str] = ["flux"],
+#         mu: Iterable[float] | NoneType = None,
+#         azi: Iterable[float] | NoneType = None,
+#         polar_reference: Iterable[float] | NoneType = None,
+#         energy: Iterable[float] | str | NoneType = None,
+#         time: Iterable[float] | NoneType = None,
+#     ):
+#         type_ = TALLY_CS
+#         super().__init__(
+#             type_, name, scores, mu, azi, polar_reference, energy, time
+#         )
+
+#         # Attach bin and attach tally to the bin
+#         self.mesh = mesh
+#         self.bin = bin
+#         bin.tallies.append(self)
+
+#     def __repr__(self):
+#         text = super().__repr__()
+#         text += (
+#             f"  - CS: {self.bin.name}"
+#             #f"  - CS: {mesh_module.decode_type(self.mesh.type)} (ID {self.mesh.ID})\n"
+#         )
+#         text += super()._phasespace_filter_text()
+#         text += f"  - Bin shape (mu, azi, energy, time, x, y, z, score): {self.bin.shape} \n"
+#         return text
+
+
+class TallyCS(TallyBase):
+    label: str = "tally_cs"
+    non_numba: list[str] = []
+
+    def __init__(
+        self,
+        mesh: MeshBase,
+        N_cs_bin: int,
+        bin_size: float | Iterable[float],
+        name: str = "",
+        scores: list[str] = ["flux"],
+        mu: Iterable[float] | NoneType = None,
+        azi: Iterable[float] | NoneType = None,
+        polar_reference: Iterable[float] | NoneType = None,
+        energy: Iterable[float] | str | NoneType = None,
+        time: Iterable[float] | NoneType = None,
+    ):
+
+        type_ = TALLY_CS
+        super().__init__(type_, name, scores, mu, azi, polar_reference, energy, time)
+        self.mesh = mesh
+        self.N_cs_bin = N_cs_bin
+        self.bin_size = np.array(
+            bin_size if not np.isscalar(bin_size) else [bin_size] * 3
+        )
+        self.scores = scores
+
+        self.csbins = []
+        self.tallies = []
+
+        # Generate random bin centers inside mesh bounds
+        # x_min, x_max = mesh.x_bounds
+        # y_min, y_max = mesh.y_bounds
+        # z_min, z_max = mesh.z_bounds
+
+        x_min, x_max = 0.0, 4.0
+        y_min, y_max = 0.0, 4.0
+        z_min, z_max = 0.0, 4.0
+
+        for i in range(N_cs_bin):
+            center = np.array(
+                [
+                    np.random.uniform(x_min, x_max),
+                    np.random.uniform(y_min, y_max),
+                    np.random.uniform(z_min, z_max),
+                ]
+            )
+            csbin = CSBin(center=center, size=self.bin_size)
+            tally = TallyCSBin(csbin, scores=scores)
+            self.csbins.append(csbin)
+            self.tallies.append(tally)
+
+    def __repr__(self):
+        text = f"TallyCS\n"
+        text += f"  - N_cs_bin: {self.N_cs_bin}\n"
+        text += f"  - Bin size: {self.bin_size.tolist()}\n"
+        text += f"  - Scores: {self.scores}\n"
+        text += f"  - Mesh bounds: {self.mesh.x_bounds}, {self.mesh.y_bounds}, {self.mesh.z_bounds}\n"
+        return text
+
+
+class TallyCSBin(TallyBase):
+    label: str = "csbin_tally"
+    csbin: CSBin
+
+    def __init__(
+        self,
+        csbin: CSBin,
+        name: str = "",
+        scores: list[str] = ["flux"],
+        mu=None,
+        azi=None,
+        polar_reference=None,
+        energy=None,
+        time=None,
+    ):
+        type_ = TALLY_CSBIN
+        super().__init__(type_, name, scores, mu, azi, polar_reference, energy, time)
+
+        self.csbin = csbin
+        csbin.tallies.append(self)
+
+    def __repr__(self):
+        text = super().__repr__()
+        text += f"  - CSBin: {self.csbin.name}\n"
+        text += f"  - Center: {self.csbin.center.tolist()}\n"
+        text += f"  - Size: {self.csbin.size.tolist()}\n"
         return text

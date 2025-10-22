@@ -46,12 +46,21 @@ mcdc.Source(
 # =============================================================================
 
 # Tallies
-mesh = mcdc.MeshUniform(x=(0.0, 4.0, 1), y=(0.0, 4.0, 1), z=(0.0, 4.0, 1))
+# mesh = mcdc.MeshUniform(x=(0.0, 4.0, 1), y=(0.0, 4.0, 1), z=(0.0, 4.0, 1))
+mesh = mcdc.MeshUniform(x=(0.0, 4.0, 16), y=(0.0, 4.0, 16))
 mcdc.TallyMesh(
     mesh=mesh,
     scores=["fission"],
 )
 mcdc.TallyCell(cell=sphere_cell, scores=["fission"])
+
+# mcdc.TallyCS(
+#     mesh=mesh,
+#     N_cs_bin=10,
+#     bin_size=(1.0, 1.0, 1.0),
+#     scores=["fission"],
+# )
+
 
 # Settings
 mcdc.settings.N_particle = 100

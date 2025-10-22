@@ -62,6 +62,8 @@ import mcdc.mcdc_set.surface_tally as surface_tally
 
 import mcdc.mcdc_set.tally as tally
 
+import mcdc.mcdc_set.cs_tally as cs_tally
+
 import mcdc.mcdc_set.global_tally as global_tally
 
 import mcdc.mcdc_set.mesh_tally as mesh_tally

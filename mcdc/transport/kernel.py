@@ -1264,6 +1264,11 @@ def move_to_event(P_arr, mcdc, data):
             tally = mcdc["mesh_tallies"][i]
             tally_module.score.mesh_tally(P_arr, distance, tally, mcdc, data)
 
+        # Compressed sensing tallies
+        for i in range(mcdc["N_cs_tally"]):
+            tally = mcdc["cs_tallies"][i]
+            tally_module.score.cs_tally(P_arr, distance, tally, mcdc, data)
+
     if settings["eigenvalue_mode"]:
         tally_module.score.eigenvalue_tally(P_arr, distance, mcdc, data)
 

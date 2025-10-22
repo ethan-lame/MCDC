@@ -329,6 +329,48 @@ def mesh_tally(particle_container, distance, tally, mcdc, data):
             idx_base += tally["stride_time"]
 
 
+@njit
+def cs_tally(particle_container, distance, tally, mcdc, data):
+    particle = particle_container[0]
+    N_cs_bins = 10
+
+    # Get filter indices
+    MG_mode = mcdc["settings"]["multigroup_mode"]
+    i_mu, i_azi, i_energy, i_time = get_filter_indices(
+        particle_container, tally, data, MG_mode
+    )
+
+    # No score if outside non-changing phase-space bins
+    if i_mu == -1 or i_azi == -1 or i_energy == -1:
+        return
+
+    # Particle/track properties
+    x = particle["x"]
+    y = particle["y"]
+    z = particle["z"]
+    ux = particle["ux"]
+    uy = particle["uy"]
+    uz = particle["uz"]
+    ut = 1.0 / physics.particle_speed(particle_container, mcdc, data)
+    x_final = x + ux * distance
+    y_final = y + uy * distance
+    z_final = z + uz * distance
+
+    # Tally base index
+    idx_base = (
+        tally["bin_offset"]
+        + i_mu * tally["stride_mu"]
+        + i_azi * tally["stride_azi"]
+        + i_energy * tally["stride_energy"]
+        + i_time * tally["stride_time"]
+    )
+
+    for j in range(N_cs_bins):
+        distance_inside = calc_distance_inside_coarse_bin(
+            start, end, center, cs_bin_size
+        )
+
+
 # =============================================================================
 # Eigenvalue tally
 # =============================================================================
