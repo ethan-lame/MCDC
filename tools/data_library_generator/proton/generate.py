@@ -442,7 +442,7 @@ def process_ace_file(ace_path, output_dir, pstar_dir=None, verbose=False):
     proton_reactions = file.create_group("proton_reactions")
     elastic_group    = proton_reactions.create_group("elastic_scattering")
     capture_group    = proton_reactions.create_group("capture")
-    inelastic_group  = proton_reactions.create_group("inelastic_reaction")
+    inelastic_group  = proton_reactions.create_group("inelastic_scattering")
     fission_group    = proton_reactions.create_group("fission")
 
     elastic_MTs    = [2]
@@ -479,7 +479,7 @@ def process_ace_file(ace_path, output_dir, pstar_dir=None, verbose=False):
     if not fissionable:
         del file["proton_reactions/fission"]
     if not inelastic_MTs:
-        del file["proton_reactions/inelastic_reaction"]
+        del file["proton_reactions/inelastic_scattering"]
 
     # Cross sections
     xs0     = ace_table.principal_cross_section_block

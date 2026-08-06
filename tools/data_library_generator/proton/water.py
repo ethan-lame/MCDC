@@ -22,4 +22,5 @@ X0 = 36.08
 sp = file.create_group("stopping_power")
 sp.create_dataset("energy",               data=E_s).attrs["unit"] = "MeV"
 sp.create_dataset("total_stopping_power", data=S_s).attrs["unit"] = "MeV cm2/g"
-sp.create_dataset("radiation_length", data=X0).attrs["unit"] = "g/cm2"
+rad_length = file.create_group("radiation_length")
+rad_length.create_dataset("radiation_length", data=X0).attrs["unit"] = "g/cm2"
