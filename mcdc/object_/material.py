@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import h5py
+import re
 
 from numpy import float64
 from numpy.typing import NDArray
@@ -107,7 +108,7 @@ class Material(MaterialBase):
     stopping_power: NDArray[float64]
     stopping_power_energy_grid: NDArray[float64]
     #
-    radiation_length: float64 = 0.0
+    radiation_length: float = 0.0
     radiation_length_provided: bool = False
 
     def __init__(
@@ -140,6 +141,10 @@ class Material(MaterialBase):
         # Stopping power
         self.stopping_power = np.array([])
         self.stopping_power_energy_grid = np.array([])
+
+        # Radiation length calculation prep
+        total_mass = 0.0
+        X0_weighted_mass = 0.0
 
         # Check if library directory is set
         lib_dir = os.getenv("MCDC_LIB")
@@ -216,6 +221,16 @@ class Material(MaterialBase):
             if nuclide.fissionable:
                 self.fissionable = True
 
+            # Calculate the material's radiation length (for proton transport purposes)
+            nuclide_mass = nuclide.mass_number
+            nuclide_X0 = nuclide.radiation_length
+
+            total_mass += nuclide_mass * nuclide_density
+            X0_weighted_mass += nuclide_mass * nuclide_density / nuclide_X0
+        
+        # Set the material radiation length
+        self.radiation_length = total_mass / X0_weighted_mass
+
     def __repr__(self):
         text = super().__repr__()
         text += f"  - Temperature: {self.temperature} K\n"
@@ -246,6 +261,8 @@ class Material(MaterialBase):
 
         self.stopping_power = file["stopping_power"]["total_stopping_power"][()]
         self.stopping_power_energy_grid = file["stopping_power"]["energy"][()]
+        if file["radiation_length"]["radiation_length"][()]:
+            self.radiation_length = file["radiation_length"]["radiation_length"][()]
         file.close()
 
     def custom_radiation_length(
@@ -254,7 +271,7 @@ class Material(MaterialBase):
             ):
 
         self.radiation_length_provided = True
-        self.radiation_length = radiation_length
+        self.radiation_length = radiation_length        
 
 
 # Currently supported temperatures

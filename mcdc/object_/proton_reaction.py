@@ -106,7 +106,7 @@ class ProtonReactionElasticScattering(ProtonReactionBase):
         MT, xs, xs_offset, reference_frame, _ = set_basic_properties(h5_group)
         _, mu = set_angular_distribution(h5_group["angular_cosine_distribution"])
         return cls(MT, xs, xs_offset, reference_frame, mu)
-
+    
     def __repr__(self):
         text = super().__repr__()
         text += f"  - Scattering cosine: {distribution.decode_type(self.mu_table.type)} [ID: {self.mu_table.ID}]\n"
@@ -164,33 +164,26 @@ class ProtonReactionInelasticScattering(ProtonReactionBase):
         MT, xs, xs_offset, reference_frame, q_value = set_basic_properties(h5_group)
         multiplicity = int(h5_group["multiplicity"][()])
 
-        angle_type, mu = set_angular_distribution(
-            h5_group["angular_cosine_distribution"]
-        )
+        ang_type_str = h5_group["angular_cosine_distribution"].attrs.get("type", "isotropic")
+        if ang_type_str == "given_in_energy_distribution":
+            angle_type, mu = set_angular_distribution_from_kalbach_mann(
+                h5_group["energy_spectrum-1"]
+            )
+        else:
+            angle_type, mu = set_angular_distribution(
+                h5_group["angular_cosine_distribution"]
+            )
 
-        # Energy spectra
-        spectrum_probability_grid = (
-            h5_group[f"spectrum_probability_grid"][()] * 1e6
-        )  # MeV to eV
-        spectrum_probability = h5_group[f"spectrum_probability"][()]
-        energy_spectra = []
-        spectrum_names = [x for x in h5_group if x.startswith("energy_spectrum-")]
-        for spectrum_name in spectrum_names:
-            energy_spectra.append(set_energy_distribution(h5_group[f"{spectrum_name}"]))
+        spectrum_probability_grid = h5_group["spectrum_probability_grid"][()] * 1e6
+        spectrum_probability = h5_group["spectrum_probability"][()]
+        energy_spectra = [
+            set_energy_distribution(h5_group[name])
+            for name in sorted(x for x in h5_group if x.startswith("energy_spectrum-"))
+        ]
 
-        return cls(
-            MT,
-            xs,
-            xs_offset,
-            reference_frame,
-            q_value,
-            multiplicity,
-            angle_type,
-            mu,
-            spectrum_probability_grid,
-            spectrum_probability,
-            energy_spectra,
-        )
+        return cls(MT, xs, xs_offset, reference_frame, q_value, multiplicity,
+                angle_type, mu, spectrum_probability_grid, spectrum_probability,
+                energy_spectra)
 
     def __repr__(self):
         text = super().__repr__()
@@ -255,9 +248,9 @@ def set_angular_distribution(h5_group):
         angle_type = ANGLE_ENERGY_CORRELATED
         mu = simulation.distributions[0]
     elif mu_type == "given_in_energy_distribution":
-        # Angular information comes from the Kalbach-Mann energy distribution.
-        angle_type = ANGLE_ENERGY_CORRELATED
-        mu = simulation.distributions[0]
+        raise ValueError(
+        "set_angular_distribution called with given_in_energy_distribution; "
+        "use set_angular_distribution_from_kalbach_mann instead.")   
     elif mu_type == "tabulated":
         angle_type = ANGLE_DISTRIBUTED
 
@@ -303,6 +296,20 @@ def set_angular_distribution(h5_group):
         mu = DistributionMultiTable(grid, offset, value, pdf)
 
     return angle_type, mu
+
+def set_angular_distribution_from_kalbach_mann(spectrum_group):
+    """
+    Build a DistributionMultiTable for Kalbach-Mann angular sampling.
+    The 'value' array holds the angular slope 'a'. The transport kernel 
+    uses these to sample cosines analytically via the Kalbach-Mann formula.
+    """
+    grid   = spectrum_group["energy"][()] * 1e6   # MeV to eV
+    offset = spectrum_group["offset"][()]
+    a      = spectrum_group["angular_slope"][()]
+    pdf    = spectrum_group["pdf"][()]
+
+    mu = DistributionMultiTable(grid, offset, a, pdf)
+    return ANGLE_ENERGY_CORRELATED, mu
 
 
 def set_energy_distribution(h5_group):

@@ -324,9 +324,6 @@ def step_particle(particle_container, program, data):
     if particle["event"] & EVENT_TIME_BOUNDARY:
         particle["alive"] = False
 
-    if particle["event"] & EVENT_CSDA_EDEP:
-        pass
-
     # CSDA energy depostiion
     if particle["event"] & EVENT_CSDA_EDEP:
         pass
